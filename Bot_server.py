@@ -4,17 +4,18 @@ import string
 import random
 import re
 import threading
+import os
 from flask import Flask, request, jsonify
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # === НАСТРОЙКИ ===
-ADMIN_ID = 5486843553  # твой Telegram ID
-TOKEN = "7789577835:AAGUe_uhpUpodEM-GOfr3aR7TUk8_RMFUKg"  # токен бота
+ADMIN_ID = 5486843553
+TOKEN = "7789577835:AAGUe_uhpUpodEM-GOfr3aR7TUk8_RMFUKg"
 KEYS_FILE = "keys.json"
 
-# === FLASK СЕРВЕР ДЛЯ ПРОГРАММЫ ===
-app = Flask(__name__)
+# === FLASK СЕРВЕР ===
+flask_app = Flask(__name__)
 
 def load_keys():
     try:
@@ -31,7 +32,7 @@ def save_keys(data):
     with open(KEYS_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
-@app.route("/check", methods=["POST"])
+@flask_app.route("/check", methods=["POST"])
 def check_key():
     data = request.json
     key = data.get("key")
@@ -121,11 +122,15 @@ async def handle_revoke(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"❌ Ключ `{key_to_remove}` удалён", parse_mode="Markdown")
 
 # === ЗАПУСК ВСЕГО ===
-if __name__ == "__main__":
-    threading.Thread(target=lambda: app.run(port=8000)).start()
+def run_flask():
+    port = int(os.getenv("PORT", 8000))
+    flask_app.run(host="0.0.0.0", port=port)
 
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("generate", handle_generate))
-    app.add_handler(CommandHandler("list", handle_list))
-    app.add_handler(CommandHandler("revoke", handle_revoke))
-    app.run_polling()
+if __name__ == "__main__":
+    threading.Thread(target=run_flask).start()
+
+    tg_app = ApplicationBuilder().token(TOKEN).build()
+    tg_app.add_handler(CommandHandler("generate", handle_generate))
+    tg_app.add_handler(CommandHandler("list", handle_list))
+    tg_app.add_handler(CommandHandler("revoke", handle_revoke))
+    tg_app.run_polling()
